@@ -133,7 +133,7 @@ mod tests {
             #[derive(Clone, Copy, Debug)]
             pub enum State {
                 Open, Close,
-            };
+            }
         };
 
         let mut right = TokenStream::new();
