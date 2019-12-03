@@ -1,0 +1,16 @@
+[package]
+name = "fsm-rs"
+version = "0.1.0"
+authors = ["Hosun Zhu <hosun@linux.com>"]
+edition = "2018"
+
+[dependencies]
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = {version = "1.0", features = ["default", "full", "extra-traits"]}
+
+[features]
+default = []
+
+[lib]
+proc-macro = true
