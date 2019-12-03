@@ -85,10 +85,10 @@ mod tests {
     use super::*;
     use crate::fsm::events::Event;
     use crate::fsm::states::State;
+    use crate::fsm::transitions::TransitionPair;
     use crate::fsm::{initial_state::InitialState, transitions::Transition};
     use proc_macro2::TokenStream;
     use syn::{self, parse_quote};
-    use crate::fsm::transitions::TransitionPair;
 
     #[test]
     fn test_machine_parse() {
@@ -108,7 +108,7 @@ mod tests {
                Close => Open,
            ] { }
         })
-            .unwrap();
+        .unwrap();
 
         let right = Machine {
             states: States(vec![
@@ -125,21 +125,20 @@ mod tests {
             initial_state: InitialState {
                 name: parse_quote! { Open },
             },
-            transitions: Transitions(vec![
-                Transition {
-                    pairs: vec![
-                        TransitionPair {
-                            from: parse_quote! { Open },
-                            to: parse_quote! { Close },
-                        },
-                        TransitionPair {
-                            from: parse_quote! { Close },
-                            to: parse_quote! { To },
-                        },
-                    ],
-                    block: parse_quote!{ {} },
-                },
-            ]),
+            transitions: Transitions(vec![Transition {
+                event_name: parse_quote! { Turn },
+                pairs: vec![
+                    TransitionPair {
+                        from: parse_quote! { Open },
+                        to: parse_quote! { Close },
+                    },
+                    TransitionPair {
+                        from: parse_quote! { Close },
+                        to: parse_quote! { Open },
+                    },
+                ],
+                block: parse_quote! { {} },
+            }]),
         };
 
         assert_eq!(left, right);
@@ -162,24 +161,35 @@ mod tests {
             initial_state: InitialState {
                 name: parse_quote! { Open },
             },
-            transitions: Transitions(vec![
-                Transition {
-                    pairs: vec![
-                        TransitionPair {
-                            from: parse_quote! { Open },
-                            to: parse_quote! { Close },
-                        },
-                        TransitionPair {
-                            from: parse_quote! { Close },
-                            to: parse_quote! { To },
-                        },
-                    ],
-                    block: parse_quote!{ {} },
-                },
-            ]),
+            transitions: Transitions(vec![Transition {
+                event_name: parse_quote! { Turn },
+                pairs: vec![
+                    TransitionPair {
+                        from: parse_quote! { Open },
+                        to: parse_quote! { Close },
+                    },
+                    TransitionPair {
+                        from: parse_quote! { Close },
+                        to: parse_quote! { To },
+                    },
+                ],
+                block: parse_quote! { {} },
+            }]),
         };
 
-        let left = quote! {};
+        let left = quote! {
+            #[allow(non_snake_case)]
+            #[derive(Clone, Copy, Debug)]
+            pub enum State {
+                Open,
+                Close,
+            }
+            const INIT_STATE: State = State::Open;
+            #[derive(Clone, Copy, Debug)]
+            pub enum Event {
+                Turn,
+            }
+        };
 
         let mut right = TokenStream::new();
         machine.to_tokens(&mut right);

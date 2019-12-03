@@ -75,6 +75,7 @@ impl ToTokens for Transitions {
 
 #[derive(Debug, PartialEq)]
 pub(crate) struct Transition {
+    pub event_name: Ident,
     pub pairs: Vec<TransitionPair>,
     pub block: ExprBlock,
 }
@@ -105,6 +106,7 @@ impl Parse for Transition {
         let block = ExprBlock::parse(input)?;
 
         Ok(Transition {
+            event_name,
             pairs: transition_pairs,
             block,
         })
@@ -116,8 +118,7 @@ impl ToTokens for Transition {
         let pairs = &self.pairs;
         let block = &self.block;
 
-        tokens.extend(quote! {
-        });
+        tokens.extend(quote! {});
     }
 }
 
@@ -138,6 +139,7 @@ mod tests {
         .unwrap();
 
         let right = Transition {
+            event_name: parse_quote! { EVENT1 },
             pairs: vec![
                 TransitionPair {
                     from: parse_quote! { S1 },
@@ -148,7 +150,7 @@ mod tests {
                     to: parse_quote! { S3 },
                 },
             ],
-            block: parse_quote!{ {} },
+            block: parse_quote! { {} },
         };
 
         assert_eq!(left, right);
@@ -157,6 +159,7 @@ mod tests {
     #[test]
     fn test_transition_to_tokens() {
         let transition = Transition {
+            event_name: parse_quote! { EVENT1 },
             pairs: vec![
                 TransitionPair {
                     from: parse_quote! { S1 },
@@ -167,7 +170,7 @@ mod tests {
                     to: parse_quote! { S3 },
                 },
             ],
-            block: parse_quote!{ {} },
+            block: parse_quote! { {} },
         };
 
         let left = quote! {};
@@ -194,6 +197,7 @@ mod tests {
 
         let right = Transitions(vec![
             Transition {
+                event_name: parse_quote! { EVENT1 },
                 pairs: vec![
                     TransitionPair {
                         from: parse_quote! { S1 },
@@ -204,14 +208,15 @@ mod tests {
                         to: parse_quote! { S3 },
                     },
                 ],
-                block: parse_quote!{ {} },
+                block: parse_quote! { {} },
             },
             Transition {
+                event_name: parse_quote! { EVENT2 },
                 pairs: vec![TransitionPair {
                     from: parse_quote! { S2 },
                     to: parse_quote! { S4 },
                 }],
-                block: parse_quote!{ {} },
+                block: parse_quote! { {} },
             },
         ]);
 
@@ -222,6 +227,7 @@ mod tests {
     fn test_transitions_to_tokens() {
         let transitions = Transitions(vec![
             Transition {
+                event_name: parse_quote! { EVENT1 },
                 pairs: vec![
                     TransitionPair {
                         from: parse_quote! { S1 },
@@ -232,14 +238,15 @@ mod tests {
                         to: parse_quote! { S3 },
                     },
                 ],
-                block: parse_quote!{ {} },
+                block: parse_quote! { {} },
             },
             Transition {
+                event_name: parse_quote! { EVENT2 },
                 pairs: vec![TransitionPair {
                     from: parse_quote! { S2 },
                     to: parse_quote! { S4 },
                 }],
-                block: parse_quote!{ {} },
+                block: parse_quote! { {} },
             },
         ]);
 
