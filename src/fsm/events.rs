@@ -133,7 +133,7 @@ mod tests {
             #[derive(Clone, Copy, Debug)]
             pub enum Event {
                 TurnOn, TurnOff,
-            };
+            }
         };
 
         let mut right = TokenStream::new();
