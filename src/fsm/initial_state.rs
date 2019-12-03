@@ -58,7 +58,7 @@ mod tests {
     #[test]
     fn test_initial_state_parse() {
         let left: InitialState = parse2(quote! {
-            InitialState { Open, Close }
+            InitialState ( Open )
         })
         .unwrap();
 
