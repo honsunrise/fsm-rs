@@ -1,5 +1,5 @@
-pub mod events;
+pub mod event;
 pub mod initial_state;
 pub mod machine;
-pub mod states;
+pub mod state;
 pub mod transitions;

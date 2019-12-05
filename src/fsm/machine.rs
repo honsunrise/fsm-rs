@@ -6,13 +6,13 @@ use syn::{
 };
 
 use crate::fsm::{
-    events::Events, initial_state::InitialState, states::States, transitions::Transitions,
+    event::Event, initial_state::InitialState, state::State, transitions::Transitions,
 };
 
 #[derive(Debug, PartialEq)]
 pub(crate) struct Machine {
-    pub states: States,
-    pub events: Events,
+    pub state: State,
+    pub event: Event,
     pub initial_state: InitialState,
     pub transitions: Transitions,
 }
@@ -23,9 +23,9 @@ impl Parse for Machine {
     /// ```text
     /// States { ... }
     ///
-    /// Events { ... }
-    ///
     /// InitialState( ... )
+    ///
+    /// Events { ... }
     ///
     /// EVENT1 [
     ///    S1 => S2,
@@ -38,14 +38,14 @@ impl Parse for Machine {
     ///
     /// ```
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        // `States { ... }`
-        let states = States::parse(input)?;
-
-        // `Events { ... }`
-        let events = Events::parse(input)?;
+        // `State { ... }`
+        let state = State::parse(input)?;
 
         // `InitialState ( ... )`
         let initial_state = InitialState::parse(input)?;
+
+        // `Events { ... }`
+        let event = Event::parse(input)?;
 
         // `EVENT1 [
         //    S1 => S2,
@@ -54,8 +54,8 @@ impl Parse for Machine {
         let transitions = Transitions::parse(input)?;
 
         Ok(Machine {
-            states,
-            events,
+            state,
+            event,
             initial_state,
             transitions,
         })
@@ -65,16 +65,16 @@ impl Parse for Machine {
 impl ToTokens for Machine {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let initial_state = &self.initial_state;
-        let states = &self.states;
-        let events = &self.events;
+        let state = &self.state;
+        let event = &self.event;
         let transitions = &self.transitions;
 
         tokens.extend(quote! {
             #[allow(non_snake_case)]
 
-            #states
+            #state
             #initial_state
-            #events
+            #event
             #transitions
         });
     }
@@ -83,25 +83,27 @@ impl ToTokens for Machine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fsm::events::Event;
-    use crate::fsm::states::State;
+    use crate::fsm::state::State;
     use crate::fsm::transitions::TransitionPair;
     use crate::fsm::{initial_state::InitialState, transitions::Transition};
     use proc_macro2::TokenStream;
-    use syn::{self, parse_quote};
+    use syn::{self, parse_quote, ItemEnum, Visibility};
 
     #[test]
     fn test_machine_parse() {
         let left: Machine = syn::parse2(quote! {
-           States {
-               Open, Close,
-           }
-
-           Events {
-               Turn,
+           #[derive(Clone, Copy, Debug)]
+           pub enum State {
+               Open,
+               Close,
            }
 
            InitialState (Open)
+
+           #[derive(Clone, Copy, Debug)]
+           pub enum Event {
+               Turn(&str),
+           }
 
            Turn [
                Open => Close,
@@ -111,17 +113,19 @@ mod tests {
         .unwrap();
 
         let right = Machine {
-            states: States(vec![
-                State {
-                    name: parse_quote! { Open },
-                },
-                State {
-                    name: parse_quote! { Close },
-                },
-            ]),
-            events: Events(vec![Event {
-                name: parse_quote! { Turn },
-            }]),
+            state: State(parse_quote! {
+                #[derive(Clone, Copy, Debug)]
+                pub enum State {
+                    Open,
+                    Close,
+                }
+            }),
+            event: Event(parse_quote! {
+                #[derive(Clone, Copy, Debug)]
+                pub enum Event {
+                    Turn(&str),
+                }
+            }),
             initial_state: InitialState {
                 name: parse_quote! { Open },
             },
@@ -147,17 +151,19 @@ mod tests {
     #[test]
     fn test_machine_to_tokens() {
         let machine = Machine {
-            states: States(vec![
-                State {
-                    name: parse_quote! { Open },
-                },
-                State {
-                    name: parse_quote! { Close },
-                },
-            ]),
-            events: Events(vec![Event {
-                name: parse_quote! { Turn },
-            }]),
+            state: State(parse_quote! {
+                #[derive(Clone, Copy, Debug)]
+                pub enum State {
+                    Open,
+                    Close,
+                }
+            }),
+            event: Event(parse_quote! {
+                #[derive(Clone, Copy, Debug)]
+                pub enum Event {
+                    Turn(&str),
+                }
+            }),
             initial_state: InitialState {
                 name: parse_quote! { Open },
             },
@@ -179,15 +185,18 @@ mod tests {
 
         let left = quote! {
             #[allow(non_snake_case)]
+
             #[derive(Clone, Copy, Debug)]
             pub enum State {
                 Open,
                 Close,
             }
+
             const INIT_STATE: State = State::Open;
+
             #[derive(Clone, Copy, Debug)]
             pub enum Event {
-                Turn,
+                Turn(&str),
             }
         };
 

@@ -7,7 +7,7 @@ use syn::{
     Attribute, ExprBlock, Ident, Stmt, Token,
 };
 
-use crate::fsm::{events::Event, states::State};
+use crate::fsm::{event::Event, state::State};
 
 #[derive(Debug, PartialEq)]
 pub(crate) struct TransitionPair {
