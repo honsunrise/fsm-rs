@@ -13,22 +13,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b94a33b3-7496-47fc-8d3d-b2036865364d" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Cargo.toml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/LICENSE-APACHE" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/LICENSE-MIT" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/traffic_light.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/fsm/events.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/fsm/initial_state.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/fsm/machine.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/fsm/mod.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/fsm/states.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/fsm/transitions.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/lib.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/hello.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/http.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/traffic_light.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/error.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/fsm/machine.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/fsm/machine.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/fsm/transitions.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/fsm/transitions.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib.rs" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -38,6 +28,13 @@
   </component>
   <component name="ClangdSettings">
     <option name="formatViaClangd" value="false" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Rust File" />
+      </list>
+    </option>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -65,6 +62,9 @@
     <property name="settings.editor.selected.configurable" value="language.rust" />
   </component>
   <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/src" />
+    </key>
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$" />
     </key>
@@ -81,10 +81,10 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Cargo Command.Test fsm::initial_state::tests::test_initial_state_parse">
-    <configuration name="Test fsm::initial_state::tests::test_initial_state_parse" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
+  <component name="RunManager" selected="Cargo Command.Test fsm::transitions::tests::test_transitions_parse_and_to_tokens">
+    <configuration name="Test fsm::machine::tests::test_machine_parse_and_to_tokens" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
       <option name="channel" value="DEFAULT" />
-      <option name="command" value="test --package fsm-rs --lib fsm::initial_state::tests::test_initial_state_parse -- --exact" />
+      <option name="command" value="test --package fsm-rs --lib fsm::machine::tests::test_machine_parse_and_to_tokens -- --exact" />
       <option name="allFeatures" value="false" />
       <option name="nocapture" value="false" />
       <option name="emulateTerminal" value="false" />
@@ -95,9 +95,48 @@
         <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
       </method>
     </configuration>
-    <configuration name="build" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
+    <configuration name="Test fsm::transitions::tests::test_transition_parse_and_to_tokens" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
       <option name="channel" value="DEFAULT" />
-      <option name="command" value="build --package fsm-rs --lib" />
+      <option name="command" value="test --package fsm-rs --lib fsm::transitions::tests::test_transition_parse_and_to_tokens -- --exact" />
+      <option name="allFeatures" value="false" />
+      <option name="nocapture" value="false" />
+      <option name="emulateTerminal" value="false" />
+      <option name="backtrace" value="SHORT" />
+      <option name="workingDirectory" value="file://$PROJECT_DIR$" />
+      <envs />
+      <method v="2">
+        <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Test fsm::transitions::tests::test_transition_to_tokens" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
+      <option name="channel" value="DEFAULT" />
+      <option name="command" value="test --package fsm-rs --lib fsm::transitions::tests::test_transition_to_tokens -- --exact" />
+      <option name="allFeatures" value="false" />
+      <option name="nocapture" value="false" />
+      <option name="emulateTerminal" value="false" />
+      <option name="backtrace" value="SHORT" />
+      <option name="workingDirectory" value="file://$PROJECT_DIR$" />
+      <envs />
+      <method v="2">
+        <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Test fsm::transitions::tests::test_transitions_parse_and_to_tokens" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
+      <option name="channel" value="DEFAULT" />
+      <option name="command" value="test --package fsm-rs --lib fsm::transitions::tests::test_transitions_parse_and_to_tokens -- --exact" />
+      <option name="allFeatures" value="false" />
+      <option name="nocapture" value="false" />
+      <option name="emulateTerminal" value="false" />
+      <option name="backtrace" value="SHORT" />
+      <option name="workingDirectory" value="file://$PROJECT_DIR$" />
+      <envs />
+      <method v="2">
+        <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Test transitions" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
+      <option name="channel" value="DEFAULT" />
+      <option name="command" value="test --package fsm-rs --lib fsm::transitions" />
       <option name="allFeatures" value="false" />
       <option name="nocapture" value="false" />
       <option name="emulateTerminal" value="false" />
@@ -110,8 +149,11 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Cargo Command.Test fsm::initial_state::tests::test_initial_state_parse" />
-        <item itemvalue="Cargo Command.build" />
+        <item itemvalue="Cargo Command.Test fsm::transitions::tests::test_transitions_parse_and_to_tokens" />
+        <item itemvalue="Cargo Command.Test fsm::transitions::tests::test_transition_parse_and_to_tokens" />
+        <item itemvalue="Cargo Command.Test fsm::machine::tests::test_machine_parse_and_to_tokens" />
+        <item itemvalue="Cargo Command.Test transitions" />
+        <item itemvalue="Cargo Command.Test fsm::transitions::tests::test_transition_to_tokens" />
       </list>
     </recent_temporary>
   </component>
@@ -134,8 +176,51 @@
       <workItem from="1575047987335" duration="95000" />
       <workItem from="1575048094305" duration="9911000" />
       <workItem from="1575389538959" duration="239000" />
-      <workItem from="1575389795961" duration="8489000" />
+      <workItem from="1575389795961" duration="43491000" />
     </task>
+    <task id="LOCAL-00001" summary="First commit">
+      <created>1575399133134</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1575399133135</updated>
+    </task>
+    <task id="LOCAL-00002" summary="fix state test">
+      <created>1575399243386</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1575399243386</updated>
+    </task>
+    <task id="LOCAL-00003" summary="fix state test">
+      <created>1575399393063</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1575399393063</updated>
+    </task>
+    <task id="LOCAL-00004" summary="fix events test">
+      <created>1575399426746</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1575399426746</updated>
+    </task>
+    <task id="LOCAL-00005" summary="add event_name and fix transition tests">
+      <created>1575400025425</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1575400025425</updated>
+    </task>
+    <task id="LOCAL-00006" summary="cargo fmt and fix event and state">
+      <created>1575544634967</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1575544634967</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -156,5 +241,11 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
+    <MESSAGE value="First commit" />
+    <MESSAGE value="fix state test" />
+    <MESSAGE value="fix events test" />
+    <MESSAGE value="add event_name and fix transition tests" />
+    <MESSAGE value="cargo fmt and fix event and state" />
+    <option name="LAST_COMMIT_MESSAGE" value="cargo fmt and fix event and state" />
   </component>
 </project>
