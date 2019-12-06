@@ -30,11 +30,15 @@ impl Parse for Machine {
     /// EVENT1 [
     ///    S1 => S2,
     ///    S1 => S3
-    /// ] { ... }
+    /// ]
     ///
     /// EVENT2 [
     ///    S2 => S4,
-    /// ] { ... }
+    /// ]
+    ///
+    /// EVENT3 [
+    ///    S3 => S5,
+    /// ]
     ///
     /// ```
     fn parse(input: ParseStream<'_>) -> Result<Self> {
@@ -50,7 +54,7 @@ impl Parse for Machine {
         // `EVENT1 [
         //    S1 => S2,
         //    S1 => S3
-        // ] { ... }`
+        // ]`
         let transitions = Transitions::parse(input)?;
 
         Ok(Machine {
@@ -126,7 +130,7 @@ mod tests {
                Open => Close,
                Close => Open,
                Close => Close,
-           ] { }
+           ]
         })
         .unwrap();
 

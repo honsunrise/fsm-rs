@@ -25,14 +25,14 @@ impl Parse for TransitionPair {
     /// S1 => S2
     /// ```
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        // `S1 => S2 }`
+        // `S1 => S2`
         //  ^^
         let from = Ident::parse(&input)?;
-        // `S1 => S2 }`
+        // `S1 => S2`
         //     ^^
         let _: Token![=>] = input.parse()?;
 
-        // `S1 => S2 }`
+        // `S1 => S2`
         //        ^^
         let to = Ident::parse(&input)?;
 
@@ -89,16 +89,15 @@ impl ToTokens for Callbacks {
 pub(crate) struct Transition {
     pub event_name: Ident,
     pub pairs: BTreeMap<Ident, BTreeSet<Ident>>,
-    pub block: ExprBlock,
 }
 
 impl Parse for Transition {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        // EVENT1 [ ... ] { ... }
+        // EVENT1 [ ... ]
         // ^^^^^^
         let event_name: Ident = input.parse()?;
 
-        // EVENT1 [ ... ] { ... }
+        // EVENT1 [ ... ]
         //          ^^^
         let block_transition;
         bracketed!(block_transition in input);
@@ -119,14 +118,10 @@ impl Parse for Transition {
                 transition_pairs.insert(pair.from, v);
             }
         }
-        // EVENT1 [ ... ] { ... }
-        //                  ^^^
-        let block = ExprBlock::parse(input)?;
 
         Ok(Transition {
             event_name,
             pairs: transition_pairs,
-            block,
         })
     }
 }
@@ -134,7 +129,6 @@ impl Parse for Transition {
 impl ToTokens for Transition {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let pairs = &self.pairs;
-        let block = &self.block;
         let event_name = Ident::new(
             &self.event_name.to_string().to_snake_case(),
             self.event_name.span(),
@@ -229,7 +223,6 @@ impl ToTokens for StateCase {
 struct EventCase {
     pub event_name: Ident,
     pub pairs: BTreeMap<Ident, BTreeSet<Ident>>,
-    pub block: ExprBlock,
 }
 
 impl ToTokens for EventCase {
@@ -299,7 +292,6 @@ impl ToTokens for Transitions {
             .map(|v| EventCase {
                 event_name: v.event_name.clone(),
                 pairs: v.pairs.clone(),
-                block: v.block.clone(),
             })
             .collect();
 
@@ -327,7 +319,7 @@ mod tests {
             EVENT1 [
                S1 => S2,
                S1 => S3,
-            ] { }
+            ]
         })
         .unwrap();
 
@@ -358,11 +350,11 @@ mod tests {
             EVENT1 [
                S1 => S2,
                S1 => S3,
-            ] { }
+            ]
 
             EVENT2 [
                S2 => S4,
-            ] { }
+            ]
         })
         .unwrap();
 
