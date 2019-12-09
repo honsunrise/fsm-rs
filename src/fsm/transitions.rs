@@ -7,10 +7,11 @@ use syn::{
     braced, bracketed,
     parse::{Parse, ParseStream, Result},
     punctuated::Punctuated,
-    Attribute, ExprBlock, Ident, Stmt, Token,
+    Attribute, ExprBlock, Ident, ItemEnum, ItemFn, Stmt, Token, Type,
 };
 
-use crate::fsm::{event::Event, state::State};
+use crate::fsm::events::Events;
+use crate::fsm::{events::Event, states::State};
 
 #[derive(Debug, PartialEq)]
 pub(crate) struct TransitionPair {
@@ -40,51 +41,6 @@ impl Parse for TransitionPair {
     }
 }
 
-struct AfterExitEnums(Ident, BTreeSet<Ident>);
-
-impl ToTokens for AfterExitEnums {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        let from = &self.0;
-        let to_set: Vec<Ident> = self.1.iter().map(|v| v.clone()).collect();
-
-        let after_exit_name: Ident = format_ident!("AfterExit{}", from.to_string().to_camel_case());
-
-        tokens.extend(quote! {
-            pub enum #after_exit_name {
-               #(#to_set,)*
-            }
-        });
-    }
-}
-
-struct Callbacks(Ident, BTreeSet<Ident>);
-
-impl ToTokens for Callbacks {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        let from = &self.0;
-        let entry_fn_names: Vec<_> = self
-            .1
-            .iter()
-            .map(|v| {
-                format_ident!(
-                    "entry_{}_from_{}",
-                    v.to_string().to_snake_case(),
-                    from.to_string().to_snake_case()
-                )
-            })
-            .collect();
-
-        let exit_after_enum_name = format_ident!("AfterExit{}", from.to_string().to_camel_case());
-        let exit_fn_name = format_ident!("exit_{}", from.to_string().to_snake_case());
-
-        tokens.extend(quote! {
-            fn #exit_fn_name(&self, data: (&str)) -> Result<#exit_after_enum_name, &'static str>;
-
-            #(fn #entry_fn_names(&self, data: (&str));)*
-        });
-    }
-}
-
 #[derive(Debug, PartialEq)]
 pub(crate) struct Transition {
     pub event_name: Ident,
@@ -104,7 +60,7 @@ impl Parse for Transition {
 
         let mut transition_pairs: BTreeMap<Ident, BTreeSet<Ident>> = BTreeMap::new();
 
-        // EVENT1 [ S1 => S2, S1 => S3, ] { ... }
+        // EVENT1 [ S1 => S2, S1 => S3, ]
         //          ^^^^^^^^^^^^^^^^^^^
         let punctuated_block_transition: Punctuated<TransitionPair, Token![,]> =
             block_transition.parse_terminated(TransitionPair::parse)?;
@@ -126,38 +82,6 @@ impl Parse for Transition {
     }
 }
 
-impl ToTokens for Transition {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        let pairs = &self.pairs;
-        let event_name = Ident::new(
-            &self.event_name.to_string().to_snake_case(),
-            self.event_name.span(),
-        );
-
-        let on_event_name = format_ident!("on_{}", event_name.to_string().to_snake_case());
-        let after_enums: Vec<_> = pairs
-            .iter()
-            .map(|v| AfterExitEnums(v.0.clone(), v.1.iter().cloned().collect()))
-            .collect();
-        let callbacks: Vec<_> = pairs
-            .iter()
-            .map(|v| Callbacks(v.0.clone(), v.1.iter().cloned().collect()))
-            .collect();
-
-        tokens.extend(quote! {
-            mod #event_name {
-
-                #( #after_enums )*
-
-                pub trait Callback {
-                    fn #on_event_name(&self, data: (&str)) -> Result<(), &'static str>;
-                    #( #callbacks )*
-                }
-            }
-        });
-    }
-}
-
 struct AfterExitCase {
     pub from: Ident,
     pub to: Ident,
@@ -165,19 +89,11 @@ struct AfterExitCase {
 
 impl ToTokens for AfterExitCase {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let from = &self.from;
         let to = &self.to;
-        let after_exit_name = format_ident!("AfterExit{}", from.to_string().to_camel_case());
-        let entry_fn_name = format_ident!(
-            "entry_{}_from_{}",
-            to.to_string().to_snake_case(),
-            from.to_string().to_snake_case()
-        );
-
         tokens.extend(quote! {
-            #after_exit_name::#to => {
-                self.current_state = State::#to;
-                self.#entry_fn_name();
+            State::#to(state) => {
+                self.current_state = State::#to(state);
+                state.entry();
                 Ok(true)
             }
         })
@@ -192,7 +108,6 @@ struct StateCase {
 impl ToTokens for StateCase {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let from = &self.from;
-        let exit_fn_name = format_ident!("exit_{}", from.to_string().to_snake_case());
 
         let after_exit_cases: Vec<_> = self
             .tos
@@ -204,11 +119,14 @@ impl ToTokens for StateCase {
             .collect();
 
         tokens.extend(quote! {
-            State::#from => {
-                match self.#exit_fn_name() {
+            State::#from(state) => {
+                match state.exit() {
                     Ok(r) =>  {
                         match r {
                             #( #after_exit_cases )*
+                            _ => {
+                                panic!("cant't go to state from current state")
+                            }
                         }
                     }
                     Err(err) => {
@@ -228,7 +146,6 @@ struct EventCase {
 impl ToTokens for EventCase {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let event_name = &self.event_name;
-        let on_event_name = format_ident!("on_{}", event_name.to_string().to_snake_case());
 
         let state_cases: Vec<_> = self
             .pairs
@@ -240,8 +157,8 @@ impl ToTokens for EventCase {
             .collect();
 
         tokens.extend(quote! {
-            Event::#event_name => {
-                if let Err(err) = self.#on_event_name() {
+            Event::#event_name(event) => {
+                if let Err(err) = event.on() {
                     return Err(err);
                 }
                 match self.current_state {
@@ -259,33 +176,39 @@ impl Parse for Transitions {
     /// example transitions tokens:
     ///
     /// ```text
-    /// EVENT1 [
-    ///    S1 => S2,
-    ///    S1 => S3,
-    /// ] { ... }
+    /// Transitions {
+    ///     EVENT1 [
+    ///         S1 => S2,
+    ///         S1 => S3,
+    ///     ],
     ///
-    /// EVENT2 [
-    ///    S2 => S4,
-    /// ] { ... }
+    ///     EVENT2 [
+    ///         S4 => S5,
+    ///     ],
+    /// }
     /// ```
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        let mut transitions: Vec<Transition> = Vec::new();
+        /// Transitions { ... }
+        /// -----------
+        let magic = Ident::parse(input)?;
 
-        while !input.is_empty() {
-            let transition = Transition::parse(input)?;
-            transitions.push(transition)
+        if magic != "Transitions" {
+            return Err(input.error("expected Transitions { ... }"));
         }
 
-        Ok(Transitions(transitions))
+        let content;
+        braced!(content in input);
+
+        let mut transitions: Vec<Transition> = Vec::new();
+
+        let transitions: Punctuated<Transition, Token![,]> =
+            content.parse_terminated(Transition::parse)?;
+        Ok(Transitions(transitions.into_iter().collect()))
     }
 }
 
-impl ToTokens for Transitions {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        for transition in &self.0 {
-            transition.to_tokens(tokens);
-        }
-
+impl Transitions {
+    pub fn to_event_fn_tokens(&self) -> TokenStream {
         let event_cases: Vec<_> = self
             .0
             .iter()
@@ -295,15 +218,13 @@ impl ToTokens for Transitions {
             })
             .collect();
 
-        tokens.extend(quote! {
-            impl Machine {
-                fn event(&mut self, event: Event) -> Result<bool, &'static str> {
-                    match event {
-                        #( #event_cases )*
-                    }
+        quote! {
+            fn event(&mut self, event: Event) -> Result<bool, &'static str> {
+                match event {
+                    #( #event_cases )*
                 }
             }
-        });
+        }
     }
 }
 
@@ -313,136 +234,78 @@ mod tests {
     use proc_macro2::TokenStream;
     use syn::{self, parse_quote};
 
-    #[test]
-    fn test_transition_parse_and_to_tokens() {
-        let transition: Transition = syn::parse2(quote! {
-            EVENT1 [
-               S1 => S2,
-               S1 => S3,
-            ]
-        })
-        .unwrap();
+    //    #[test]
+    //    fn test_transition_parse_and_to_tokens() {
+    //        let transition: Transition = syn::parse2(quote! {
+    //            EVENT1 [
+    //               S1 => S2,
+    //               S1 => S3,
+    //            ]
+    //        })
+    //        .unwrap();
+    //
+    //        let left = quote! {
+    //            mod event1 {
+    //                pub enum AfterExitS1 {
+    //                    S2,
+    //                    S3,
+    //                }
+    //                pub trait Callback {
+    //                    fn on_event1(&self, data: (&str)) -> Result<(), &'static str>;
+    //                    fn exit_s1(&self, data: (&str)) -> Result<AfterExitS1, &'static str>;
+    //                    fn entry_s2_from_s1(&self, data: (&str));
+    //                    fn entry_s3_from_s1(&self, data: (&str));
+    //                }
+    //            }
+    //        };
+    //
+    //        let mut right = transition.to_def_tokens();
+    //
+    //        assert_eq!(format!("{}", left), format!("{}", right))
+    //    }
 
-        let left = quote! {
-            mod event1 {
-                pub enum AfterExitS1 {
-                    S2,
-                    S3,
-                }
-                pub trait Callback {
-                    fn on_event1(&self, data: (&str)) -> Result<(), &'static str>;
-                    fn exit_s1(&self, data: (&str)) -> Result<AfterExitS1, &'static str>;
-                    fn entry_s2_from_s1(&self, data: (&str));
-                    fn entry_s3_from_s1(&self, data: (&str));
-                }
-            }
-        };
-
-        let mut right = TokenStream::new();
-        transition.to_tokens(&mut right);
-
-        assert_eq!(format!("{}", left), format!("{}", right))
-    }
-
-    #[test]
-    fn test_transitions_parse_and_to_tokens() {
-        let transitions: Transitions = syn::parse2(quote! {
-            EVENT1 [
-               S1 => S2,
-               S1 => S3,
-            ]
-
-            EVENT2 [
-               S2 => S4,
-            ]
-        })
-        .unwrap();
-
-        let left = quote! {
-            mod event1 {
-                pub enum AfterExitS1 {
-                    S2,
-                    S3,
-                }
-                pub trait Callback {
-                    fn on_event1(&self, data: (&str)) -> Result<(), &'static str>;
-                    fn exit_s1(&self, data: (&str)) -> Result<AfterExitS1, &'static str>;
-                    fn entry_s2_from_s1(&self, data: (&str));
-                    fn entry_s3_from_s1(&self, data: (&str));
-                }
-            }
-            mod event2 {
-                pub enum AfterExitS2 {
-                    S4,
-                }
-                pub trait Callback {
-                    fn on_event2(&self, data: (&str)) -> Result<(), &'static str>;
-                    fn exit_s2(&self, data: (&str)) -> Result<AfterExitS2, &'static str>;
-                    fn entry_s4_from_s2(&self, data: (&str));
-                }
-            }
-            impl Machine {
-                fn event(&mut self, event: Event) -> Result<bool, &'static str> {
-                    match event {
-                        Event::EVENT1 => {
-                            if let Err(err) = self.on_event1() {
-                                return Err(err);
-                            }
-                            match self.current_state {
-                                State::S1 => {
-                                    match self.exit_s1() {
-                                        Ok(r) => {
-                                            match r {
-                                                AfterExitS1::S2 => {
-                                                    self.current_state = State::S2;
-                                                    self.entry_s2_from_s1();
-                                                    Ok(true)
-                                                }
-                                                AfterExitS1::S3 => {
-                                                    self.current_state = State::S3;
-                                                    self.entry_s3_from_s1();
-                                                    Ok(true)
-                                                }
-                                            }
-                                        }
-                                        Err(err) => {
-                                            Err(err)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        Event::EVENT2 => {
-                            if let Err(err) = self.on_event2() {
-                                return Err(err);
-                            }
-                            match self.current_state {
-                                State::S2 => {
-                                    match self.exit_s2() {
-                                        Ok(r) => {
-                                            match r {
-                                                AfterExitS2::S4 => {
-                                                    self.current_state = State::S4;
-                                                    self.entry_s4_from_s2();
-                                                    Ok(true)
-                                                }
-                                            }
-                                        }
-                                        Err(err) => {
-                                            Err(err)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        };
-
-        let mut right = TokenStream::new();
-        transitions.to_tokens(&mut right);
-
-        assert_eq!(format!("{}", left), format!("{}", right))
-    }
+    //    #[test]
+    //    fn test_transitions_parse_and_to_tokens() {
+    //        let transitions: Transitions = syn::parse2(quote! {
+    //            Transitions {
+    //                EVENT1 [
+    //                   S1 => S2,
+    //                   S1 => S3,
+    //                ],
+    //                EVENT2 [
+    //                   S2 => S4,
+    //                ]
+    //            }
+    //        })
+    //        .unwrap();
+    //
+    //        let left = quote! {
+    //            mod event1 {
+    //                pub enum AfterExitS1 {
+    //                    S2,
+    //                    S3,
+    //                }
+    //                pub trait Callback {
+    //                    fn on_event1(&self, data: (&str)) -> Result<(), &'static str>;
+    //                    fn exit_s1(&self, data: (&str)) -> Result<AfterExitS1, &'static str>;
+    //                    fn entry_s2_from_s1(&self, data: (&str));
+    //                    fn entry_s3_from_s1(&self, data: (&str));
+    //                }
+    //            }
+    //            mod event2 {
+    //                pub enum AfterExitS2 {
+    //                    S4,
+    //                }
+    //                pub trait Callback {
+    //                    fn on_event2(&self, data: (&str)) -> Result<(), &'static str>;
+    //                    fn exit_s2(&self, data: (&str)) -> Result<AfterExitS2, &'static str>;
+    //                    fn entry_s4_from_s2(&self, data: (&str));
+    //                }
+    //            }
+    //        };
+    //
+    //        let mut right = transitions.to_def_tokens();
+    //
+    //        assert_eq!(format!("{}", left), format!("{}", right))
+    //    }
 }

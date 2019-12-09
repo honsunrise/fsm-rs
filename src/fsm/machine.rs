@@ -1,66 +1,92 @@
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use quote::{quote, ToTokens};
 use syn::{
     parse::{Parse, ParseStream, Result},
-    parse_quote, Ident,
+    parse_quote,
+    token::{Colon, Pub},
+    Field, Fields, Ident, ItemEnum, ItemStruct, Token, Type, VisPublic, Visibility,
 };
 
 use crate::fsm::{
-    event::Event, initial_state::InitialState, state::State, transitions::Transitions,
+    events::Events, machine_context::MachineContext, states::States,
+    transitions::Transitions,
 };
+use syn::spanned::Spanned;
 
 #[derive(Debug, PartialEq)]
 pub(crate) struct Machine {
-    pub state: State,
-    pub event: Event,
-    pub initial_state: InitialState,
+    pub machine_context: MachineContext,
+    pub events: Events,
+    pub states: States,
     pub transitions: Transitions,
 }
 
 impl Parse for Machine {
-    /// example machine tokens:
+    /// example machine:
     ///
     /// ```text
-    /// States { ... }
     ///
-    /// InitialState( ... )
+    /// Context = Machine;
     ///
-    /// Events { ... }
+    /// States {
+    ///     S1 = S1,
+    ///     S2 = S2,
+    ///     S3 = S3,
+    ///     S4 = S4,
+    ///     S5 = S5
+    /// }
     ///
-    /// EVENT1 [
-    ///    S1 => S2,
-    ///    S1 => S3
-    /// ]
+    /// InitialState( ... );
     ///
-    /// EVENT2 [
-    ///    S2 => S4,
-    /// ]
-    ///
-    /// EVENT3 [
-    ///    S3 => S5,
-    /// ]
-    ///
+    /// Events {
+    ///     EVENT1 = Event1,
+    ///     EVENT2 = Event2
+    /// }
+
+    /// Transitions {
+    ///     EVENT1 [
+    ///        S1 => S2,
+    ///        S1 => S3,
+    ///     ],
+    ///     EVENT2 [
+    ///         S4 => S5,
+    ///     ]
+    /// }
     /// ```
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        // `State { ... }`
-        let state = State::parse(input)?;
+        /// Context = Machine;
+        let machine_context = MachineContext::parse(input)?;
 
-        // `InitialState ( ... )`
-        let initial_state = InitialState::parse(input)?;
+        /// States {
+        ///     S1 = S1,
+        ///     S2 = S2,
+        ///     S3 = S3,
+        ///     S4 = S4,
+        ///     S5 = S5
+        /// }
+        let states = States::parse(input)?;
 
-        // `Events { ... }`
-        let event = Event::parse(input)?;
+        /// Events {
+        ///     EVENT1 = Event1,
+        ///     EVENT2 = Event2
+        /// }
+        let events = Events::parse(input)?;
 
-        // `EVENT1 [
-        //    S1 => S2,
-        //    S1 => S3
-        // ]`
+        /// Transitions {
+        ///     EVENT1 [
+        ///         S1 => S2,
+        ///         S1 => S3,
+        ///     ],
+        ///     EVENT2 [
+        ///         S4 => S5,
+        ///     ],
+        /// }
         let transitions = Transitions::parse(input)?;
 
         Ok(Machine {
-            state,
-            event,
-            initial_state,
+            machine_context,
+            events,
+            states,
             transitions,
         })
     }
@@ -68,33 +94,37 @@ impl Parse for Machine {
 
 impl ToTokens for Machine {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let initial_state = &self.initial_state;
-        let state = &self.state;
-        let event = &self.event;
-        let transitions = &self.transitions;
+        let states = &self.states;
+        let events = &self.events;
+
+        let machine_context_type = &self.machine_context.context_type();
+
+        let event_fn_impl = self.transitions.to_event_fn_tokens();
 
         tokens.extend(quote! {
             #[allow(non_snake_case)]
 
-            #state
-            #initial_state
-            #event
+            #states
+
+            #events
 
             pub struct Machine {
+                context: #machine_context_type,
                 current_state: State,
             }
 
             impl Machine {
+                #event_fn_impl
+
+                pub fn new() -> Machine {
+                    Machine {
+                        context: #machine_context_type::default(),
+                        current_state: State::default(),
+                    }
+                }
+
                 pub fn state(&self) -> State {
                     self.current_state
-                }
-            }
-
-            #transitions
-
-            pub fn new() -> Machine {
-                Machine {
-                    current_state: INIT_STATE,
                 }
             }
         });
@@ -104,33 +134,36 @@ impl ToTokens for Machine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fsm::state::State;
-    use crate::fsm::transitions::TransitionPair;
-    use crate::fsm::{initial_state::InitialState, transitions::Transition};
     use proc_macro2::TokenStream;
     use syn::{self, parse_quote, ItemEnum, Visibility};
 
     #[test]
     fn test_machine_parse_and_to_tokens() {
         let machine: Machine = syn::parse2(quote! {
-           #[derive(Clone, Copy, Debug)]
-           pub enum State {
-               Open,
-               Close,
-           }
+            Context = FSM;
 
-           InitialState (Open)
+            States {
+                S1 = S1,
+                S2 = S2,
+                S3 = S3,
+                S4 = S4,
+                S5 = S5
+            }
 
-           #[derive(Clone, Copy, Debug)]
-           pub enum Event {
-               Turn,
-           }
+            Events {
+                EVENT1 = Event1,
+                EVENT2 = Event2
+            }
 
-           Turn [
-               Open => Close,
-               Close => Open,
-               Close => Close,
-           ]
+            Transitions {
+                EVENT1 [
+                   S1 => S2,
+                   S1 => S3,
+                ],
+                EVENT2 [
+                    S4 => S5,
+                ]
+            }
         })
         .unwrap();
 
