@@ -36,8 +36,6 @@ impl Parse for Machine {
     ///     S5 = S5
     /// }
     ///
-    /// InitialState( ... );
-    ///
     /// Events {
     ///     EVENT1 = Event1,
     ///     EVENT2 = Event2
